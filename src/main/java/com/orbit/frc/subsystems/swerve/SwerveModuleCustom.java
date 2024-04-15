@@ -17,9 +17,8 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.lib.math.OnboardModuleState;
-import swervelib.encoders.CANCoderSwerve;
-import swervelib.math.SwerveModuleState2;
+import com.orbit.frc.subsystems.swerve.math.OnboardModuleState;
+import com.orbit.frc.subsystems.swerve.encoders.CANCoderSwerve; 
 
 public class SwerveModuleCustom {
     /* Module details */
@@ -41,8 +40,6 @@ public class SwerveModuleCustom {
     /* Controllers */
     public final SparkPIDController driveController;
     public final SparkPIDController angleController;
-    public final PIDConstants anglePID;
-    public final SimpleMotorFeedforward driveSVA;
     public SimpleMotorFeedforward feedforward;
 
     @AutoLogOutput(key = "Swerve/Modules/M{moduleNumber}/TargetSpeed")
@@ -62,9 +59,6 @@ public class SwerveModuleCustom {
     public SwerveModuleCustom(int moduleNumber, SwerveModuleConstants moduleConstants, SwerveConfig swerveConfig) {
         this.moduleNumber = moduleNumber;
         this.swerveConfig = swerveConfig; 
-
-        this.anglePID = moduleConstants.anglePID;
-        this.driveSVA = moduleConstants.driveSVA;
 
         /* Angle Encoder Config */
         angleEncoder = new CANCoderSwerve(moduleConstants.canCoderID);
@@ -109,10 +103,10 @@ public class SwerveModuleCustom {
         angleMotor.restoreFactoryDefaults();
         CANSparkMaxUtil.setCANSparkMaxBusUsage(angleMotor, Usage.kPositionOnly);
         angleMotor.setSmartCurrentLimit(swerveConfig.FREE_CURRENT_LIMIT);
-        angleMotor.setInverted(Constants.Swerve.ANGLE_INVERT);
-        angleMotor.setIdleMode(Constants.Swerve.IDLE_MODE);
+        angleMotor.setInverted(swerveConfig.ANGLE_INVERT);
+        angleMotor.setIdleMode(swerveConfig.IDLE_MODE);
         integratedAngleEncoder.setPositionConversionFactor(swerveConfig.ANGLE_CONVERSION_FACTOR);
-        this.anglePID.applyPID(this.angleController);
+        swerveConfig.ANGLE_PID.applyPID(this.angleController);
         angleController.setFF(0);
         angleMotor.enableVoltageCompensation(12.0);
         this.resetToAbsolute();
@@ -122,20 +116,20 @@ public class SwerveModuleCustom {
         driveMotor.restoreFactoryDefaults();
         CANSparkMaxUtil.setCANSparkMaxBusUsage(driveMotor, Usage.kAll);
         driveMotor.setSmartCurrentLimit(swerveConfig.STALL_CURRENT_LIMIT, swerveConfig.FREE_CURRENT_LIMIT);
-        driveMotor.setInverted(Constants.Swerve.DRIVE_INVERT);
-        driveMotor.setIdleMode(Constants.Swerve.IDLE_MODE);
+        driveMotor.setInverted(swerveConfig.DRIVE_INVERT);
+        driveMotor.setIdleMode(swerveConfig.IDLE_MODE);
         driveEncoder.setVelocityConversionFactor(swerveConfig.DRIVE_CONVERSION_VELOCITY_FACTOR);
         driveEncoder.setPositionConversionFactor(swerveConfig.DRIVE_CONVERSION_POSITION_FACTOR);
-        Constants.Swerve.drivePID.applyPID(this.driveController);
+        swerveConfig.DRIVE_PID.applyPID(this.driveController);
         driveController.setFF(0);
-        this.feedforward = driveSVA;
+        this.feedforward = swerveConfig.DRIVE_SVA;
         driveMotor.enableVoltageCompensation(12.0);
         driveEncoder.setPosition(0.0);
     }
 
     private void setSpeed(SwerveModuleState desiredState, boolean isOpenLoop) {
         if (isOpenLoop) {
-            double percentOutput = desiredState.speedMetersPerSecond / Constants.ROBOT_MAX_VELOCITY_METERS_PER_SECOND;
+            double percentOutput = desiredState.speedMetersPerSecond / swerveConfig.MAX_SPEED;
             driveMotor.set(percentOutput);
         } else {
             this.targetSpeed = desiredState.speedMetersPerSecond;
@@ -167,7 +161,7 @@ public class SwerveModuleCustom {
 
         double angle = desiredState.angle.getDegrees() % 360.0;
         if (desiredState.speedMetersPerSecond != 0.0
-                && (Math.abs(desiredState.speedMetersPerSecond) <= (Constants.Swerve.MAX_SPEED * 0.01))) {
+                && (Math.abs(desiredState.speedMetersPerSecond) <= (swerveConfig.MAX_SPEED * 0.01))) {
             // System.out.println("IN Last angle");
             angle = lastAngle;
         }
@@ -218,7 +212,7 @@ public class SwerveModuleCustom {
         return new SwerveModulePosition(this.getDistance(), Rotation2d.fromDegrees(-this.getAngle().getDegrees()));
     }
 
-    public CANSparkMax getDriveMotor() {
+    public CANSparkBase getDriveMotor() {
         return this.driveMotor;
     }
 }

@@ -24,11 +24,13 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
+import com.orbit.frc.subsystems.swerve.autos.SwerveAutoConfig;
+import com.orbit.frc.subsystems.swerve.util.Angles;
 import com.orbit.frc.subsystems.swerve.util.NavX;
-import frc.robot.subsystems.swerve.SwerveAutoConfig;
-import frc.robot.util.Angles;
+import com.orbit.frc.subsystems.swerve.util.PIDSwerveValues;
+import com.orbit.frc.subsystems.swerve.vision.PhotonCameraWrapper;
 import com.orbit.frc.util.OrbitTimer;
-import frc.robot.util.PIDSwerveValues; 
 
 public class SwerveSubsystem extends SubsystemBase {
 	public final NavX navX;
@@ -81,6 +83,8 @@ public class SwerveSubsystem extends SubsystemBase {
 
 	private boolean motionProfileInit = false;
 
+	private SwerveConfig swerveConfig; 
+
 	@AutoLogOutput(key = "Swerve/CurrentAcceleration")
 	public Translation2d currentAcceleration = new Translation2d(0, 0);
 	private Translation2d prevVelocity = new Translation2d(0, 0);
@@ -90,12 +94,14 @@ public class SwerveSubsystem extends SubsystemBase {
 
 	private Pose2d prevTargetPose = new Pose2d();
 
-	protected SwerveSubsystem(SwerveConfig swerveConfig) {
+	protected SwerveSubsystem(SwerveConfig swerveConfig, VisionConfig visionConfig) {
 		// Gyro setup
 		navX = new NavX();
-		navX.setInverted(Constants.Swerve.isGyroInverted);
+		navX.setInverted(swerveConfig.isGyroInverted);
 
-		pCameraWrapper = new PhotonCameraWrapper();
+		this.swerveConfig = swerveConfig; 
+
+		pCameraWrapper = new PhotonCameraWrapper(visionConfig);
 		// Swerve module setup
 		swerveModules = new SwerveModuleCustom[swerveConfig.moduleConstants.length];
 		for (int i = 0; i < swerveConfig.moduleConstants.length; i++) { 
@@ -103,11 +109,11 @@ public class SwerveSubsystem extends SubsystemBase {
 		}
 
 		// Pose estimator
-		swerveDrivePoseEstimator = new SwerveDrivePoseEstimator(Constants.Swerve.swerveKinematics, navX.getYaw(),
+		swerveDrivePoseEstimator = new SwerveDrivePoseEstimator(swerveConfig.swerveDriveKinematics, navX.getYaw(),
 				getPositions(), new Pose2d());
 
 		// Configure the AutoBuilder that handles all the auto path following!!
-		SwerveAutoConfig.configureAutoBuilder(this);
+		SwerveAutoConfig.configureAutoBuilder(this, swerveConfig);
 
 		Preferences.initDouble("Swerve DriveX kP", this.XkP);
 		Preferences.initDouble("Swerve DriveX kI", this.XkI);
@@ -119,7 +125,7 @@ public class SwerveSubsystem extends SubsystemBase {
 		Preferences.initDouble("Swerve Angle kI", this.AkI);
 		Preferences.initDouble("Swerve Angle kD", this.AkD);
 
-		this.driveConstraints = new TrapezoidProfile.Constraints(Constants.Swerve.MAX_SPEED - 2.0, 2.0);
+		this.driveConstraints = new TrapezoidProfile.Constraints(swerveConfig.MAX_SPEED, swerveConfig.MAX_ACCELERATION);
 		this.driveXMotionProfile = new TrapezoidProfile(driveConstraints);
 		this.driveYMotionProfile = new TrapezoidProfile(driveConstraints);
 		this.driveMotionProfileXStartState = new TrapezoidProfile.State(0.0, 0.0);
@@ -151,7 +157,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	public void drive(Translation2d translation, double rotation, boolean fieldRelative, boolean isOpenLoop) {
-		SwerveModuleState[] swerveModuleStates = Constants.Swerve.swerveKinematics.toSwerveModuleStates(
+		SwerveModuleState[] swerveModuleStates = swerveConfig.swerveDriveKinematics.toSwerveModuleStates(
 				fieldRelative
 						? ChassisSpeeds.fromFieldRelativeSpeeds(
 								translation.getX(), translation.getY(),
@@ -162,7 +168,7 @@ public class SwerveSubsystem extends SubsystemBase {
 				this.centerOfRotation);
 		// Get rid of tiny tiny movements in the wheels to have more consistent driving
 		// experience
-		SwerveDriveKinematics.desaturateWheelSpeeds(swerveModuleStates, Constants.Swerve.MAX_SPEED);
+		SwerveDriveKinematics.desaturateWheelSpeeds(swerveModuleStates, swerveConfig.MAX_SPEED);
 
 		// set the states for each module
 		for (SwerveModuleCustom mod : swerveModules) {
@@ -181,7 +187,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	public void setModuleStates(SwerveModuleState[] desiredStates) {
-		SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, Constants.Swerve.MAX_SPEED);
+		SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, swerveConfig.MAX_SPEED);
 
 		for (SwerveModuleCustom mod : swerveModules) {
 			mod.setDesiredState(desiredStates[mod.moduleNumber], false);
@@ -189,7 +195,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	public void setModuleStatesDuringAuto(SwerveModuleState[] desiredStates) {
-		SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, Constants.Swerve.AutoConstants.maxSpeed);
+		SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, swerveConfig.MAX_SPEED);
 
 		for (SwerveModuleCustom mod : swerveModules) {
 			mod.setDesiredState(desiredStates[mod.moduleNumber], false);
@@ -297,7 +303,7 @@ public class SwerveSubsystem extends SubsystemBase {
 	}
 
 	public ChassisSpeeds getRobotRelativeSpeeds() {
-		return Constants.Swerve.swerveKinematics.toChassisSpeeds(getStates());
+		return swerveConfig.swerveDriveKinematics.toChassisSpeeds(getStates());
 	}
 
 	public boolean isInRange(Pose2d target, double positionTolerance, double angleTolerance) {
