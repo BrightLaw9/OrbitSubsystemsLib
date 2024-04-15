@@ -54,7 +54,7 @@ public class TelescopeMove extends Command {
             );
 	
         double target = profileTarget.position;
-        double input = config.telescope.getPositionDegrees();
+        double input = config.telescope.getPositionMeters();
         double pidOutput = config.pid.calculate(target, input);
         config.telescope.setNormalizedVoltage(pidOutput);
     }

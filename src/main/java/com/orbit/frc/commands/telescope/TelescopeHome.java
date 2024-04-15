@@ -25,8 +25,10 @@ public class TelescopeHome extends Command {
 
     @Override
     public void end(boolean interrupted) {
-        this.config.telescope.setNormalizedVoltage(0.0);
-        this.config.telescope.resetEncoder();
+        if (!interrupted) {
+            this.config.telescope.setNormalizedVoltage(0.0);
+            this.config.telescope.resetEncoder();
+        }
     }
 
     @Override
