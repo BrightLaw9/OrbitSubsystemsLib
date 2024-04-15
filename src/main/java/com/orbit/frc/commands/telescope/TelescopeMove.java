@@ -37,7 +37,7 @@ public class TelescopeMove extends Command {
     public void initialize() {
         config.pid.reset();
         
-        this.startState = new TrapezoidProfile.State(config.telescope.getPositionDegrees(), 0.0);
+        this.startState = new TrapezoidProfile.State(config.telescope.getPositionMeters(), 0.0);
         this.endState = new TrapezoidProfile.State(this.targetPosition, 0.0);
 
         this.motionProfile = new TrapezoidProfile(config.motionProfileConstraints);
