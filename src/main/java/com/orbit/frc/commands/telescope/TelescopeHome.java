@@ -30,7 +30,7 @@ public class TelescopeHome extends Command {
     }
 
     @Override
-    public void isFinished() {
+    public boolean isFinished() {
         return this.config.telescope.getLimitSwitch();
     }
 }

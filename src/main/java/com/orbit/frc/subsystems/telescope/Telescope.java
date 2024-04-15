@@ -1,5 +1,6 @@
 package com.orbit.frc.subsystems.telescope;
 
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Telescope extends SubsystemBase {
