@@ -49,11 +49,7 @@ public class SwerveSubsystem extends SubsystemBase {
 								// Constants.Swerve.driveAlignPID.i, Constants.Swerve.driveAlignPID.d
 	private double YkI = 0.00000;
 	private double YkD = 0.000;
-	private double AkP = 0.0035; // changed mar 27 for testing 0.04; // 0.4? // A as in Angle for anglePID ||
-									// replaces onstants.Swerve.anglePID.p,
-									// Constants.Swerve.anglePID.i, Constants.Swerve.anglePID.d
-	private double AkI = 0.000000;
-	private double AkD = 0.001; // 0.01?
+
 	public boolean manualDrive = false;
 
 	private PhotonCameraWrapper pCameraWrapper;
@@ -62,7 +58,7 @@ public class SwerveSubsystem extends SubsystemBase {
 
 	private PIDController driveYPID = new PIDController(YkP, YkI, YkD);
 
-	private PIDController anglePID = new PIDController(AkP, AkI, AkD);
+	private PIDController anglePID; 
 
 	private TrapezoidProfile.Constraints driveConstraints;
 	private TrapezoidProfile driveXMotionProfile;
@@ -74,16 +70,11 @@ public class SwerveSubsystem extends SubsystemBase {
 	private TrapezoidProfile.State driveMotionProfileYStartState;
 	private TrapezoidProfile.State driveMotionProfileYEndState;
 
-	private TrapezoidProfile.State rotMotionProfileStartState;
-	private TrapezoidProfile.State rotMotionProfileEndState;
-
-	private TrapezoidProfile rotMotionProfile;
-
 	private OrbitTimer timer;
 
 	private boolean motionProfileInit = false;
 
-	private SwerveConfig swerveConfig; 
+	public SwerveConfig swerveConfig; 
 
 	@AutoLogOutput(key = "Swerve/CurrentAcceleration")
 	public Translation2d currentAcceleration = new Translation2d(0, 0);
@@ -115,15 +106,17 @@ public class SwerveSubsystem extends SubsystemBase {
 		// Configure the AutoBuilder that handles all the auto path following!!
 		SwerveAutoConfig.configureAutoBuilder(this, swerveConfig);
 
-		Preferences.initDouble("Swerve DriveX kP", this.XkP);
-		Preferences.initDouble("Swerve DriveX kI", this.XkI);
-		Preferences.initDouble("Swerve DriveX kD", this.XkD);
-		Preferences.initDouble("Swerve DriveY kP", this.YkP);
-		Preferences.initDouble("Swerve DriveY kI", this.YkI);
-		Preferences.initDouble("Swerve DriveY kD", this.YkD);
-		Preferences.initDouble("Swerve Angle kP", this.AkP);
-		Preferences.initDouble("Swerve Angle kI", this.AkI);
-		Preferences.initDouble("Swerve Angle kD", this.AkD);
+		// Preferences.initDouble("Swerve DriveX kP", this.XkP);
+		// Preferences.initDouble("Swerve DriveX kI", this.XkI);
+		// Preferences.initDouble("Swerve DriveX kD", this.XkD);
+		// Preferences.initDouble("Swerve DriveY kP", this.YkP);
+		// Preferences.initDouble("Swerve DriveY kI", this.YkI);
+		// Preferences.initDouble("Swerve DriveY kD", this.YkD);
+		Preferences.initDouble("Swerve Angle kP", swerveConfig.ROBOT_ROTATION_PID.p);
+		Preferences.initDouble("Swerve Angle kI", swerveConfig.ROBOT_ROTATION_PID.i);
+		Preferences.initDouble("Swerve Angle kD", swerveConfig.ROBOT_ROTATION_PID.d);
+
+		this.anglePID = new PIDController(swerveConfig.ROBOT_ROTATION_PID.p, swerveConfig.ROBOT_ROTATION_PID.i, swerveConfig.ROBOT_ROTATION_PID.d); 
 
 		this.driveConstraints = new TrapezoidProfile.Constraints(swerveConfig.MAX_SPEED, swerveConfig.MAX_ACCELERATION);
 		this.driveXMotionProfile = new TrapezoidProfile(driveConstraints);
@@ -133,12 +126,6 @@ public class SwerveSubsystem extends SubsystemBase {
 
 		this.driveMotionProfileYStartState = new TrapezoidProfile.State(0.0, 0.0);
 		this.driveMotionProfileYEndState = new TrapezoidProfile.State(0.0, 0.0);
-
-		this.rotMotionProfile = new TrapezoidProfile(new TrapezoidProfile.Constraints(45.0, 10.0)); // in degrees/sec
-																									// and deg/s^2
-
-		this.rotMotionProfileStartState = new TrapezoidProfile.State(0.0, 0.0);
-		this.rotMotionProfileEndState = new TrapezoidProfile.State(0.0, 0.0);
 
 		this.timer = new OrbitTimer();
 	}
@@ -374,14 +361,6 @@ public class SwerveSubsystem extends SubsystemBase {
 					this.currentVelocity.getY());
 			this.driveMotionProfileYEndState = new TrapezoidProfile.State(target.getY(), 0.0);
 
-			Angles convertScopeResult = convertToAppropriateScope(target.getRotation().getDegrees());
-			double currentAngle = convertScopeResult.currentAngle;
-			double targetAngle = convertScopeResult.targetAngle;
-
-			this.rotMotionProfileStartState = new TrapezoidProfile.State(currentAngle,
-					this.currentVelocity.getRotation().getDegrees());
-			this.rotMotionProfileEndState = new TrapezoidProfile.State(targetAngle, 0.0);
-
 			this.timer.start();
 
 			this.prevTargetPose = target;
@@ -398,12 +377,8 @@ public class SwerveSubsystem extends SubsystemBase {
 				this.driveMotionProfileYStartState,
 				this.driveMotionProfileYEndState);
 
-		TrapezoidProfile.State rotProfileTarget = this.rotMotionProfile.calculate(this.timer.getTimeDeltaSec(),
-				this.rotMotionProfileStartState, this.rotMotionProfileEndState);
-
 		double profilePositionTargetX = profileTargetXPos.position;
 		double profilePositionTargetY = profileTargetYPos.position;
-		double profilePositionTargetRot = rotProfileTarget.position;
 
 		SmartDashboard.putNumber("Cur Pose Y", this.currentPose().getY());
 		SmartDashboard.putNumber("Profile Target Y Position", profilePositionTargetY);
@@ -411,8 +386,6 @@ public class SwerveSubsystem extends SubsystemBase {
 		SmartDashboard.putNumber("Target Profile Velocity Y", profileTargetYPos.velocity);
 		SmartDashboard.putNumber("Current velocity Drive X", this.currentVelocity.getX());
 		SmartDashboard.putNumber("Target Profile Velocity X", profileTargetXPos.velocity);
-		SmartDashboard.putNumber("Current velocity Rot", this.currentVelocity.getRotation().getDegrees());
-		SmartDashboard.putNumber("Target Profile Velocity Rot", rotProfileTarget.velocity);
 
 		Pose2d currentPose = this.currentPose();
 
@@ -423,9 +396,6 @@ public class SwerveSubsystem extends SubsystemBase {
 
 		double driveXOut = profileTargetXPos.velocity;
 		double driveYOut = profileTargetYPos.velocity;
-		// double rotOut = -Math.toRadians(rotProfileTarget.velocity); // Drive method
-		// CW +, robot
-		// angles CCW +
 
 		double rotOut = this.calculatePIDAngleOutput(target.getRotation().getDegrees());
 
@@ -439,9 +409,9 @@ public class SwerveSubsystem extends SubsystemBase {
 		// double rotOut =
 		// this.calculatePIDAngleOutput(target.getRotation().getDegrees());
 		// }
-		System.out.println("Current Pose: " + this.currentPose());
+		//System.out.println("Current Pose: " + this.currentPose());
 
-		System.out.println("Error X: " + driveXPID.getPositionError() + " Error Y: " + driveYPID.getPositionError());
+		//System.out.println("Error X: " + driveXPID.getPositionError() + " Error Y: " + driveYPID.getPositionError());
 
 		// return new PIDSwerveValues(driveXOut, driveYOut,
 		// this.calculatePIDAngleOutput(profilePositionTargetRot));
@@ -483,15 +453,15 @@ public class SwerveSubsystem extends SubsystemBase {
 		lastPose = swerveDrivePoseEstimator.getEstimatedPosition();
 		lastPoseTimestamp = System.currentTimeMillis();
 
-		Preferences.getDouble("Swerve DriveX kP", this.XkP);
-		Preferences.getDouble("Swerve DriveX kI", this.XkI);
-		Preferences.getDouble("Swerve DriveX kD", this.XkD);
-		Preferences.getDouble("Swerve DriveY kP", this.YkP);
-		Preferences.getDouble("Swerve DriveY kI", this.YkI);
-		Preferences.getDouble("Swerve DriveY kD", this.YkD);
-		Preferences.getDouble("Swerve Angle kP", this.AkP);
-		Preferences.getDouble("Swerve Angle kI", this.AkI);
-		Preferences.getDouble("Swerve Angle kD", this.AkD);
+		// Preferences.getDouble("Swerve DriveX kP", this.XkP);
+		// Preferences.getDouble("Swerve DriveX kI", this.XkI);
+		// Preferences.getDouble("Swerve DriveX kD", this.XkD);
+		// Preferences.getDouble("Swerve DriveY kP", this.YkP);
+		// Preferences.getDouble("Swerve DriveY kI", this.YkI);
+		// Preferences.getDouble("Swerve DriveY kD", this.YkD);
+		// Preferences.getDouble("Swerve Angle kP", this.AkP);
+		// Preferences.getDouble("Swerve Angle kI", this.AkI);
+		// Preferences.getDouble("Swerve Angle kD", this.AkD);
 
 		SmartDashboard.putBoolean("Manual Drive Active", manualDrive);
 	}

@@ -71,6 +71,9 @@ public class SwerveConfig {
     */
     public SimpleMotorFeedforward DRIVE_SVA; 
 
+    /** PID that controls the alignment of the robot (rotation wise, to a target) */
+    public PIDConstants ROBOT_ROTATION_PID; 
+
     /** MAX speed for robot travel */
     public double MAX_SPEED; 
     public double MAX_ACCELERATION; 
@@ -78,10 +81,10 @@ public class SwerveConfig {
     // Auto Constants
     public com.pathplanner.lib.util.PIDConstants translation; 
     public com.pathplanner.lib.util.PIDConstants rotation; 
-    public double maxAngularVelocity; 
-    public double maxAngularAcceleration; 
-    public double positionTolerance; 
-    public double angleTolerance; 
+    public double maxAngularVelocityRadians; 
+    public double maxAngularAccelerationRadians; 
+    public double positionToleranceMeters; 
+    public double angleToleranceDegrees; 
     
 
     /**
@@ -119,14 +122,14 @@ public class SwerveConfig {
                 default: 
                     break; 
             }
+        }
 
-            if (config.swerveDriveKinematics == null) { 
+        if (config.swerveDriveKinematics == null) { 
                 config.swerveDriveKinematics = new SwerveDriveKinematics(
                 new Translation2d(config.WHEEL_BASE_METERS / 2.0, config.TRACK_WIDTH_METERS / 2.0),
                 new Translation2d(config.WHEEL_BASE_METERS / 2.0, -config.TRACK_WIDTH_METERS / 2.0),
                 new Translation2d(-config.WHEEL_BASE_METERS / 2.0, config.TRACK_WIDTH_METERS / 2.0),
                 new Translation2d(-config.WHEEL_BASE_METERS / 2.0, -config.TRACK_WIDTH_METERS / 2.0));
-            }
         }
         config.DRIVE_CONVERSION_POSITION_FACTOR = (config.WHEEL_DIAMETER_METERS * Math.PI) / config.DRIVE_GEAR_RATIO;
         config.DRIVE_CONVERSION_VELOCITY_FACTOR = config.DRIVE_CONVERSION_POSITION_FACTOR / 60.0;

@@ -15,8 +15,16 @@ public class AlignToPose extends Command {
 
     private boolean allowEnd;
 
+    /** Creates a new AlignToPose Command
+     * Uses motion profiling for the translation of the swerve, and PID control for rotation based on ROBOT_ROTATION_PID in SwerveConfig
+     * @param swerveSubsystem instance of swerve subsystem created
+     * @param target the desired position to send robot
+     * @param allowEnd if command can end; in some cases, as this command requires swerve, not allowing end prevents driver from shifting bot manually
+     * The command will end if allowed to end (default is allowed), and if within provided tolerance (translation and rotation wise). 
+     * Provide values in SwerveConfig 
+     */
     public AlignToPose(SwerveSubsystem swerveSubsystem, Pose2d target) {
-        this(swerveSubsystem, target, false);
+        this(swerveSubsystem, target, true);
     }
 
     public AlignToPose(SwerveSubsystem swerveSubsystem, Pose2d target, boolean allowEnd) {
@@ -42,9 +50,9 @@ public class AlignToPose extends Command {
     @Override
     public boolean isFinished() {
         return allowEnd && (this.swerveSubsystem.drivePIDAtTarget()
-                || (Math.abs(this.swerveSubsystem.calculateDistanceToTarget(this.target)) < 0.05
+                || (Math.abs(this.swerveSubsystem.calculateDistanceToTarget(this.target)) < this.swerveSubsystem.swerveConfig.positionToleranceMeters
                         && Math.abs(this.target.getRotation().getDegrees()
-                                - this.swerveSubsystem.currentPose().getRotation().getDegrees()) < 5.0));
+                                - this.swerveSubsystem.currentPose().getRotation().getDegrees()) < this.swerveSubsystem.swerveConfig.angleToleranceDegrees));
     }
 
     @Override
