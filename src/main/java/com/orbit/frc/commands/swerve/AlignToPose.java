@@ -19,14 +19,19 @@ public class AlignToPose extends Command {
      * Uses motion profiling for the translation of the swerve, and PID control for rotation based on ROBOT_ROTATION_PID in SwerveConfig
      * @param swerveSubsystem instance of swerve subsystem created
      * @param target the desired position to send robot
-     * @param allowEnd if command can end; in some cases, as this command requires swerve, not allowing end prevents driver from shifting bot manually
-     * The command will end if allowed to end (default is allowed), and if within provided tolerance (translation and rotation wise). 
-     * Provide values in SwerveConfig 
      */
     public AlignToPose(SwerveSubsystem swerveSubsystem, Pose2d target) {
         this(swerveSubsystem, target, true);
     }
 
+    /** Creates a new AlignToPose Command
+     * Uses motion profiling for the translation of the swerve, and PID control for rotation based on ROBOT_ROTATION_PID in SwerveConfig
+     * @param swerveSubsystem instance of swerve subsystem created
+     * @param target the desired position to send robot
+     * @param allowEnd if command can end; in some cases, as this command requires swerve, not allowing end prevents driver from shifting bot manually
+     * The command will end if allowed to end (default is allowed), and if within provided tolerance (translation and rotation wise). 
+     * Provide values in SwerveConfig 
+     */
     public AlignToPose(SwerveSubsystem swerveSubsystem, Pose2d target, boolean allowEnd) {
         this.swerveSubsystem = swerveSubsystem;
         this.target = target;

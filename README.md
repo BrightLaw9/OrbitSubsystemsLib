@@ -17,3 +17,6 @@ Planned features:
 - Inverse kinematics for chained pivots and telescopes
 - Simulation support
   - Physics/kinematics perhaps?
+
+Note: 
+If on Windows, recommended to install "Testing tools core" from Visual Studio Build Tools C++ (for Google Tests run on this library)
