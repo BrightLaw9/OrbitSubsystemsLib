@@ -1,5 +1,6 @@
 package com.orbit.frc.subsystems.swerve.autos;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import com.orbit.frc.subsystems.swerve.SwerveConfig;
@@ -11,9 +12,18 @@ import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.ReplanningConfig;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 
 public final class SwerveAutoConfig {
+ 
+    private static SendableChooser<Command> autoChooser; 
+
+	public static void initalizeAutoChooser() {
+		autoChooser = AutoBuilder.buildAutoChooser();
+		SmartDashboard.putData(autoChooser);
+	}
 
     public static void configureAutoBuilder(SwerveSubsystem swerve, SwerveConfig swerveConfig) {
         AutoBuilder.configureHolonomic(
@@ -41,6 +51,7 @@ public final class SwerveAutoConfig {
                 swerve);
         
         Pathfinding.setPathfinder(new LocalADStar());
+        initalizeAutoChooser();
         System.out.println("AutoBuilder Configured!");
     }
 }
